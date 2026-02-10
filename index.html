@@ -20,24 +20,33 @@
         }
         #text-container {
             position: absolute;
-            top: 20%; /* 往上提一点，防止被烟花挡住 */
+            top: 35%;
             text-align: center;
             z-index: 10;
+            width: 90%;
         }
+        /* 名字：变小，加自适应 */
         #name-text {
-            font-size: 48px; /* 名字变小（相对祝福语） */
+            font-size: 5vw; /* 根据屏幕宽度自动调整大小 */
             font-weight: normal;
             color: #fff;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-shadow: 0 0 15px rgba(255,255,255,0.8);
-            letter-spacing: 5px;
+            white-space: nowrap; /* 强制不换行 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100vw;
         }
+        /* 祝福语：也变小，加自适应 */
         #wish-text {
-            font-size: 80px; /* 祝福语巨大（比名字大很多） */
+            font-size: 7vw; /* 根据屏幕宽度自动调整大小 */
             font-weight: bold;
             color: #ffcc00;
             text-shadow: 0 0 20px rgba(255,204,0,0.8);
-            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100vw;
         }
         canvas {
             position: absolute;
@@ -51,9 +60,9 @@
 
 <!-- 文字容器 -->
 <div id="text-container">
-    <!-- 第一行：昵称 (字体较小) -->
+    <!-- 第一行：昵称 (字体较小，自适应) -->
     <div id="name-text">正在加载...</div>
-    <!-- 第二行：祝福语 (字体巨大，带表情包) -->
+    <!-- 第二行：祝福语 (字体稍大，自适应，带表情包) -->
     <div id="wish-text">新年快乐，万事胜意！🎉</div>
 </div>
 
@@ -61,30 +70,50 @@
 
 <script>
     // ==========================
-    // 1. 获取名字逻辑 (保持不变)
+    // 1. 名字映射表 (英文缩写 -> 中文名字)
     // ==========================
-    const nameList = [
-        "姐姐", "超级美丽的高思涵宝贝", "睿睿老师", "辛雨同志", 
-        "亲爱的段懿轩", "榕榕", "亲爱的乔老师", "亲爱的小郄", 
-        "孔梦涵", "王晨潇", "亲爱的孙老师"
-    ];
+    // 使用对象来映射，方便通过英文查找中文
+    const nameMap = {
+        "duojing": "多静姐姐",
+        "sihan": "超级美丽的高思涵宝贝",
+        "rui": "睿睿老师",
+        "xinyu": "辛雨同志",
+        "duan": "段懿轩同志",
+        "rong": "榕榕",
+        "qiao": "亲爱的乔老师",
+        "qie": "亲爱的小郄",
+        "kong": "孔梦涵",
+        "wang": "王晨潇",
+        "jiejie": "姐姐"
+        // 如果需要加新名字，按照 "英文": "中文", 的格式写在这里
+    };
 
-    function getHashBasedIndex() {
-        const hash = window.location.hash.slice(1);
-        if (!hash) return Math.floor(Math.random() * nameList.length);
-        let hashValue = 0;
-        for (let i = 0; i < hash.length; i++) {
-            hashValue = (hashValue << 5) - hashValue + hash.charCodeAt(i);
-            hashValue |= 0;
+    // ==========================
+    // 2. 获取链接中的英文标识符
+    // ==========================
+    function getNameFromHash() {
+        // 获取 # 后面的内容，并转为小写
+        const hash = window.location.hash.slice(1).toLowerCase();
+        
+        // 如果没有输入任何内容，默认显示第一个
+        if (!hash) {
+            return "朋友";
         }
-        return Math.abs(hashValue) % nameList.length;
+
+        // 查找映射表
+        if (nameMap[hash]) {
+            return nameMap[hash];
+        } else {
+            // 如果输入的英文不在列表里，显示“朋友”
+            return "朋友";
+        }
     }
 
-    let userName = nameList[getHashBasedIndex()] || "朋友";
+    let userName = getNameFromHash();
     document.getElementById('name-text').innerText = userName;
 
     // ==========================
-    // 2. 全屏烟花特效 (已优化：不规律 + 全屏 + 加浓)
+    // 3. 全屏烟花特效 (已加浓版)
     // ==========================
     const canvas = document.getElementById('fireworks');
     const ctx = canvas.getContext('2d');
@@ -100,7 +129,6 @@
     function Particle(x, y, color) {
         this.x = x;
         this.y = y;
-        // 速度范围加大，让爆炸更散乱
         this.vx = (Math.random() - 0.5) * 15; 
         this.vy = (Math.random() - 0.5) * 15;
         this.color = color;
@@ -111,7 +139,7 @@
     Particle.prototype.update = function() {
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.15; // 增加重力
+        this.vy += 0.15;
         this.alpha -= this.decay;
         return this.alpha > 0;
     };
@@ -121,9 +149,8 @@
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        // 粒子形状随机化 (圆形/方形)
         if (Math.random() > 0.5) {
-            ctx.arc(this.x, this.y, Math.random() * 4 + 1, 0, Math.PI * 2); // 粒子变大
+            ctx.arc(this.x, this.y, Math.random() * 4 + 1, 0, Math.PI * 2);
         } else {
             ctx.fillRect(this.x, this.y, 3, 3);
         }
@@ -133,22 +160,17 @@
 
     const particles = [];
 
-    // 创建爆炸 (位置改为全屏随机)
     function explode(x, y) {
         const hue = Math.floor(Math.random() * 360);
         const color = `hsl(${hue}, 100%, 60%)`;
-        
-        // 【关键修改1】数量加倍，从 60-100 改为 100-200
-        const count = 100 + Math.floor(Math.random() * 100); 
+        const count = 100 + Math.floor(Math.random() * 100);
         for(let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, color));
         }
     }
 
-    // 动画循环
     function animate() {
-        // 【关键修改2】拖尾变淡，把 0.1 改为 0.03，背景擦得更慢，残影更浓
-        ctx.fillStyle = 'rgba(0,0,0,0.03)'; 
+        ctx.fillStyle = 'rgba(0,0,0,0.03)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         for(let i = particles.length - 1; i >= 0; i--) {
@@ -162,9 +184,6 @@
         requestAnimationFrame(animate);
     }
 
-    // ==========================
-    // 3. 自动发射烟花 (改为不规律全屏)
-    // ==========================
     function launch() {
         let x, y;
         const side = Math.floor(Math.random() * 4);
@@ -189,8 +208,7 @@
 
         explode(x, y);
 
-        // 随机延迟
-        const delay = 150 + Math.random() * 300; // 发射频率稍微加快
+        const delay = 150 + Math.random() * 300;
         setTimeout(launch, delay);
     }
 
