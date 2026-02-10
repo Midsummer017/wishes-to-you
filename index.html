@@ -11,7 +11,6 @@
             overflow: hidden;
             background-color: #000;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -20,145 +19,171 @@
             cursor: pointer;
             position: relative;
         }
-        #greeting {
-            font-size: 48px;
-            font-weight: bold;
-            text-shadow: 0 0 10px #fff, 0 0 20px #ffcc00;
-            z-index: 10;
-            margin-bottom: 20px;
+        #text-container {
+            position: absolute;
+            top: 20%;
             text-align: center;
             opacity: 0;
-            transform: translateY(20px);
-            transition: all 1s ease;
+            transform: scale(0.8);
+            transition: all 0.6s ease-out;
+            z-index: 10;
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+        #text-container.show {
+            opacity: 1;
+            transform: scale(1);
         }
         canvas {
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="greeting">新年快乐，万事胜意，<span id="userName">朋友</span>！</div>
-    <canvas id="fireworksCanvas"></canvas>
+<div id="text-container">
+    <div id="greeting"></div>
+</div>
+<canvas id="fireworks"></canvas>
 
-    <script>
-        // ==========================
-        // 1. 核心功能：获取链接里的名字
-        // ==========================
-        function getQueryParam(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
+<script>
+    // === 1. 获取链接中的名字参数 ===
+    const urlParams = new URLSearchParams(window.location.search);
+    const userName = urlParams.get('name') || '朋友'; // 默认“朋友”
+
+    // 设置文案
+    document.getElementById('greeting').innerText = `${userName} 新年快乐，万事胜意！`;
+
+    // === 2. Canvas 烟花核心逻辑 ===
+    const canvas = document.getElementById('fireworks');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // 粒子类
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.radius = Math.random() * 2 + 1;
+            this.radians = Math.random() * Math.PI * 2;
+            this.speed = Math.random() * 3 + 1;
+            this.decay = Math.random() * 0.05 + 0.02;
+            this.trail = [];
+            this.trailLength = 5;
         }
 
-        // 获取链接里的 ?name=XXX，如果没有，默认叫 "朋友"
-        const userName = getQueryParam('name') || '宝';
-
-        // 把名字显示到页面上
-        document.getElementById('userName').innerText = userName;
-
-        // ==========================
-        // 2. 烟花粒子系统 (精简版)
-        // ==========================
-        const canvas = document.getElementById('fireworksCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                this.radius = Math.random() * 2 + 1;
-                this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 3 + 1;
-                this.gravity = 0.1;
-                this.life = 100;
+        update() {
+            // 保存轨迹
+            this.trail.push({ x: this.x, y: this.y });
+            if (this.trail.length > this.trailLength) {
+                this.trail.shift();
             }
 
-            update() {
-                this.life--;
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed + this.gravity;
-                this.speed *= 0.95; // 阻力
-            }
+            // 更新位置
+            this.x += Math.cos(this.radians) * this.speed;
+            this.y += Math.sin(this.radians) * this.speed;
+            this.speed -= this.decay;
 
-            draw() {
-                ctx.save();
-                ctx.globalAlpha = this.life / 100;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        let particles = [];
-        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'];
-
-        function createExplosion(x, y) {
-            const count = 50;
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, color));
+            // 绘制拖尾
+            ctx.beginPath();
+            for (let i = 0; i < this.trail.length; i++) {
+                const alpha = (1 - i / this.trailLength) * 0.6;
+                ctx.fillStyle = `rgba(${this.color.r},${this.color.g},${this.color.b},${alpha})`;
+                ctx.fillRect(this.trail[i].x, this.trail[i].y, this.radius, this.radius);
             }
         }
 
-        function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        draw() {
+            ctx.fillStyle = `rgb(${this.color.r},${this.color.g},${this.color.b})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-            particles.forEach((p, i) => {
+        isAlive() {
+            return this.speed > 0.1;
+        }
+    }
+
+    // 烟花爆炸
+    function createExplosion(x, y) {
+        const hue = Math.random() * 360;
+        const particles = [];
+        const count = 100; // 每次爆炸粒子数（原为30，现提升3倍+）
+
+        for (let i = 0; i < count; i++) {
+            const color = {
+                r: Math.random() * 50 + 200,
+                g: Math.random() * 50 + 100,
+                b: Math.random() * 50 + 50
+            };
+            particles.push(new Particle(x, y, color));
+        }
+
+        return particles;
+    }
+
+    // 主动画循环
+    let particles = [];
+    let hasExploded = false;
+
+    function animate() {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'lighter';
+
+        if (hasExploded) {
+            // 爆炸动画
+            particles = particles.filter(p => p.isAlive());
+            particles.forEach(p => {
                 p.update();
                 p.draw();
-                if (p.life <= 0) particles.splice(i, 1);
             });
-
-            // 随机在屏幕上空生成烟花
-            if (Math.random() < 0.05) {
-                const x = Math.random() * canvas.width;
-                const y = Math.random() * canvas.height * 0.5;
-                createExplosion(x, y);
-            }
-
-            requestAnimationFrame(animate);
         }
 
-        // ==========================
-        // 3. 页面加载与交互
-        // ==========================
-        window.onload = function() {
-            // 1. 文案淡入并上浮
-            document.getElementById('greeting').style.opacity = 1;
-            document.getElementById('greeting').style.transform = 'translateY(0)';
+        requestAnimationFrame(animate);
+    }
 
-            // 2. 点击屏幕可以手动放烟花
-            document.body.addEventListener('click', function(e) {
-                createExplosion(e.clientX, e.clientY);
-            });
+    // 点击触发
+    document.body.addEventListener('click', function(e) {
+        if (hasExploded) return;
 
-            // 3. 启动自动烟花
-            animate();
+        hasExploded = true;
 
-            // 4. 自动播放烟花（页面加载后3秒开始）
+        // 屏幕中心爆炸
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // 生成多组爆炸（增强密度）
+        for (let i = 0; i < 5; i++) {
             setTimeout(() => {
-                for (let i = 0; i < 5; i++) {
-                    const x = Math.random() * canvas.width;
-                    const y = Math.random() * canvas.height * 0.3;
-                    createExplosion(x, y);
-                }
-            }, 3000);
-        };
+                const offset = Math.random() * 50 - 25;
+                particles.push(...createExplosion(centerX + offset, centerY + offset));
+            }, i * 100);
+        }
 
-        // 4. 屏幕适配
-        window.addEventListener('resize', function() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-    </script>
+        // 显示文案
+        document.getElementById('text-container').classList.add('show');
+    });
+
+    // 自动适配窗口大小
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    animate();
+</script>
+
 </body>
 </html>
