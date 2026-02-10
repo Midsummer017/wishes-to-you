@@ -64,9 +64,9 @@
     // 1. 获取名字逻辑 (保持不变)
     // ==========================
     const nameList = [
-        "多静姐姐", "超级美丽的高思涵宝贝", "睿睿老师", "辛雨同志", 
-        "段懿轩同志", "榕榕", "亲爱的乔老师", "亲爱的小郄", 
-        "孔梦涵", "王晨潇", "姐姐"
+        "姐姐", "超级美丽的高思涵宝贝", "睿睿老师", "辛雨同志", 
+        "亲爱的段懿轩", "榕榕", "亲爱的乔老师", "亲爱的小郄", 
+        "孔梦涵", "王晨潇", "亲爱的孙老师"
     ];
 
     function getHashBasedIndex() {
@@ -84,7 +84,7 @@
     document.getElementById('name-text').innerText = userName;
 
     // ==========================
-    // 2. 全屏烟花特效 (已优化：不规律 + 全屏)
+    // 2. 全屏烟花特效 (已优化：不规律 + 全屏 + 加浓)
     // ==========================
     const canvas = document.getElementById('fireworks');
     const ctx = canvas.getContext('2d');
@@ -96,7 +96,7 @@
     resize();
     window.addEventListener('resize', resize);
 
-    // 粒子构造函数 (增加了速度的随机性)
+    // 粒子构造函数
     function Particle(x, y, color) {
         this.x = x;
         this.y = y;
@@ -111,7 +111,7 @@
     Particle.prototype.update = function() {
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.15; // 增加重力，下落感更强
+        this.vy += 0.15; // 增加重力
         this.alpha -= this.decay;
         return this.alpha > 0;
     };
@@ -123,9 +123,9 @@
         ctx.beginPath();
         // 粒子形状随机化 (圆形/方形)
         if (Math.random() > 0.5) {
-            ctx.arc(this.x, this.y, Math.random() * 3, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, Math.random() * 4 + 1, 0, Math.PI * 2); // 粒子变大
         } else {
-            ctx.fillRect(this.x, this.y, 2, 2);
+            ctx.fillRect(this.x, this.y, 3, 3);
         }
         ctx.fill();
         ctx.restore();
@@ -133,13 +133,13 @@
 
     const particles = [];
 
-    // 创建爆炸 (位置改为全屏随机，包括边缘)
+    // 创建爆炸 (位置改为全屏随机)
     function explode(x, y) {
-        // 颜色改为随机HSL，色彩更丰富
         const hue = Math.floor(Math.random() * 360);
         const color = `hsl(${hue}, 100%, 60%)`;
         
-        const count = 60 + Math.floor(Math.random() * 40); // 粒子数量随机
+        // 【关键修改1】数量加倍，从 60-100 改为 100-200
+        const count = 100 + Math.floor(Math.random() * 100); 
         for(let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, color));
         }
@@ -147,8 +147,8 @@
 
     // 动画循环
     function animate() {
-        // 拖尾效果：黑色半透明填充，制造残影
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        // 【关键修改2】拖尾变淡，把 0.1 改为 0.03，背景擦得更慢，残影更浓
+        ctx.fillStyle = 'rgba(0,0,0,0.03)'; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         for(let i = particles.length - 1; i >= 0; i--) {
@@ -166,9 +166,8 @@
     // 3. 自动发射烟花 (改为不规律全屏)
     // ==========================
     function launch() {
-        // 1. 随机位置：包含屏幕外，制造从天而降或从角落飞入的效果
         let x, y;
-        const side = Math.floor(Math.random() * 4); // 0=上, 1=下, 2=左, 3=右
+        const side = Math.floor(Math.random() * 4);
         switch(side) {
             case 0: // 顶部
                 x = Math.random() * canvas.width;
@@ -188,11 +187,10 @@
                 break;
         }
 
-        // 2. 在随机位置爆炸
         explode(x, y);
 
-        // 3. 随机延迟，制造密集且不规律的感觉
-        const delay = 200 + Math.random() * 600;
+        // 随机延迟
+        const delay = 150 + Math.random() * 300; // 发射频率稍微加快
         setTimeout(launch, delay);
     }
 
