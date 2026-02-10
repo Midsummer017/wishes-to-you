@@ -20,24 +20,24 @@
         }
         #text-container {
             position: absolute;
-            top: 30%; /* 调整位置，让整体更居中 */
+            top: 20%; /* 往上提一点，防止被烟花挡住 */
             text-align: center;
             z-index: 10;
-            /* pointer-events: none; 如果想去掉文字遮挡点击效果，可以解开这行注释 */
         }
         #name-text {
-            font-size: 32px; /* 昵称稍小 */
+            font-size: 48px; /* 名字变小（相对祝福语） */
             font-weight: normal;
             color: #fff;
             margin-bottom: 20px;
-            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            text-shadow: 0 0 15px rgba(255,255,255,0.8);
+            letter-spacing: 5px;
         }
         #wish-text {
-            font-size: 48px; /* 祝福语巨大 */
+            font-size: 80px; /* 祝福语巨大（比名字大很多） */
             font-weight: bold;
             color: #ffcc00;
-            text-shadow: 0 0 10px rgba(255,204,0,0.8);
-            line-height: 1.4;
+            text-shadow: 0 0 20px rgba(255,204,0,0.8);
+            line-height: 1.2;
         }
         canvas {
             position: absolute;
@@ -51,9 +51,9 @@
 
 <!-- 文字容器 -->
 <div id="text-container">
-    <!-- 第一行：昵称 -->
+    <!-- 第一行：昵称 (字体较小) -->
     <div id="name-text">正在加载...</div>
-    <!-- 第二行：祝福语（包含微信礼花表情） -->
+    <!-- 第二行：祝福语 (字体巨大，带表情包) -->
     <div id="wish-text">新年快乐，万事胜意！🎉</div>
 </div>
 
@@ -61,26 +61,17 @@
 
 <script>
     // ==========================
-    // 1. 获取名字（保持不变）
+    // 1. 获取名字逻辑 (保持不变)
     // ==========================
     const nameList = [
-        "多静姐姐", 
-        "超级美丽的高思涵宝贝", 
-        "睿睿老师", 
-        "辛雨同志", 
-        "段懿轩同志", 
-        "榕榕", 
-        "亲爱的乔老师", 
-        "亲爱的小郄", 
-        "孔梦涵", 
-        "王晨潇",
-        "姐姐"
+        "多静姐姐", "超级美丽的高思涵宝贝", "睿睿老师", "辛雨同志", 
+        "段懿轩同志", "榕榕", "亲爱的乔老师", "亲爱的小郄", 
+        "孔梦涵", "王晨潇", "姐姐"
     ];
 
     function getHashBasedIndex() {
         const hash = window.location.hash.slice(1);
         if (!hash) return Math.floor(Math.random() * nameList.length);
-        
         let hashValue = 0;
         for (let i = 0; i < hash.length; i++) {
             hashValue = (hashValue << 5) - hashValue + hash.charCodeAt(i);
@@ -90,12 +81,10 @@
     }
 
     let userName = nameList[getHashBasedIndex()] || "朋友";
-
-    // 设置昵称
     document.getElementById('name-text').innerText = userName;
 
     // ==========================
-    // 2. 全屏烟花特效
+    // 2. 全屏烟花特效 (已优化：不规律 + 全屏)
     // ==========================
     const canvas = document.getElementById('fireworks');
     const ctx = canvas.getContext('2d');
@@ -107,21 +96,22 @@
     resize();
     window.addEventListener('resize', resize);
 
-    // 粒子构造函数
+    // 粒子构造函数 (增加了速度的随机性)
     function Particle(x, y, color) {
         this.x = x;
         this.y = y;
-        this.vx = (Math.random() - 0.5) * 10;
-        this.vy = (Math.random() - 0.5) * 10;
+        // 速度范围加大，让爆炸更散乱
+        this.vx = (Math.random() - 0.5) * 15; 
+        this.vy = (Math.random() - 0.5) * 15;
         this.color = color;
         this.alpha = 1;
-        this.decay = Math.random() * 0.05 + 0.02;
+        this.decay = Math.random() * 0.03 + 0.01;
     }
 
     Particle.prototype.update = function() {
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.1; // 重力
+        this.vy += 0.15; // 增加重力，下落感更强
         this.alpha -= this.decay;
         return this.alpha > 0;
     };
@@ -131,21 +121,25 @@
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        // 粒子形状随机化 (圆形/方形)
+        if (Math.random() > 0.5) {
+            ctx.arc(this.x, this.y, Math.random() * 3, 0, Math.PI * 2);
+        } else {
+            ctx.fillRect(this.x, this.y, 2, 2);
+        }
         ctx.fill();
         ctx.restore();
     };
 
     const particles = [];
 
-    // 创建爆炸
+    // 创建爆炸 (位置改为全屏随机，包括边缘)
     function explode(x, y) {
-        // 随机颜色
+        // 颜色改为随机HSL，色彩更丰富
         const hue = Math.floor(Math.random() * 360);
         const color = `hsl(${hue}, 100%, 60%)`;
         
-        // 创建粒子
-        const count = 50 + Math.floor(Math.random() * 50);
+        const count = 60 + Math.floor(Math.random() * 40); // 粒子数量随机
         for(let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, color));
         }
@@ -153,11 +147,10 @@
 
     // 动画循环
     function animate() {
-        // 拖尾效果
+        // 拖尾效果：黑色半透明填充，制造残影
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 更新粒子
         for(let i = particles.length - 1; i >= 0; i--) {
             if(!particles[i].update()) {
                 particles.splice(i, 1);
@@ -170,17 +163,36 @@
     }
 
     // ==========================
-    // 3. 自动发射烟花
+    // 3. 自动发射烟花 (改为不规律全屏)
     // ==========================
     function launch() {
-        // 随机位置
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        
+        // 1. 随机位置：包含屏幕外，制造从天而降或从角落飞入的效果
+        let x, y;
+        const side = Math.floor(Math.random() * 4); // 0=上, 1=下, 2=左, 3=右
+        switch(side) {
+            case 0: // 顶部
+                x = Math.random() * canvas.width;
+                y = -20;
+                break;
+            case 1: // 底部
+                x = Math.random() * canvas.width;
+                y = canvas.height + 20;
+                break;
+            case 2: // 左边
+                x = -20;
+                y = Math.random() * canvas.height;
+                break;
+            case 3: // 右边
+                x = canvas.width + 20;
+                y = Math.random() * canvas.height;
+                break;
+        }
+
+        // 2. 在随机位置爆炸
         explode(x, y);
 
-        // 随机延迟，制造密集感
-        const delay = 200 + Math.random() * 400;
+        // 3. 随机延迟，制造密集且不规律的感觉
+        const delay = 200 + Math.random() * 600;
         setTimeout(launch, delay);
     }
 
