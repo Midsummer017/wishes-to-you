@@ -16,19 +16,28 @@
             height: 100vh;
             font-family: "Microsoft YaHei", sans-serif;
             color: #fff;
-            cursor: pointer;
             position: relative;
         }
         #text-container {
             position: absolute;
-            top: 20%;
+            top: 30%; /* 调整位置，让整体更居中 */
             text-align: center;
-            opacity: 0;
-            transition: opacity 1s ease;
             z-index: 10;
-            font-size: 24px;
+            /* pointer-events: none; 如果想去掉文字遮挡点击效果，可以解开这行注释 */
+        }
+        #name-text {
+            font-size: 32px; /* 昵称稍小 */
+            font-weight: normal;
+            color: #fff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+        #wish-text {
+            font-size: 48px; /* 祝福语巨大 */
             font-weight: bold;
-            text-shadow: 0 0 10px #fff, 0 0 20px #ffcc00;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255,204,0,0.8);
+            line-height: 1.4;
         }
         canvas {
             position: absolute;
@@ -40,17 +49,20 @@
 </head>
 <body>
 
+<!-- 文字容器 -->
 <div id="text-container">
-    <div id="name-text" style="font-size: 36px; margin-bottom: 20px;"></div>
-    <div id="wish-text">新年快乐，万事胜意！</div>
+    <!-- 第一行：昵称 -->
+    <div id="name-text">正在加载...</div>
+    <!-- 第二行：祝福语（包含微信礼花表情） -->
+    <div id="wish-text">新年快乐，万事胜意！🎉</div>
 </div>
+
+<canvas id="fireworks"></canvas>
 
 <script>
     // ==========================
-    // 核心功能：无痕随机名字
+    // 1. 获取名字（保持不变）
     // ==========================
-    
-    // 1. 预设名字列表（已更新：加入了“姐姐”，共11人）
     const nameList = [
         "多静姐姐", 
         "超级美丽的高思涵宝贝", 
@@ -62,124 +74,119 @@
         "亲爱的小郄", 
         "孔梦涵", 
         "王晨潇",
-        "姐姐"  // <-- 新增的姐姐
+        "姐姐"
     ];
 
-    // 2. 根据链接 # 后面的字符生成一个随机数
     function getHashBasedIndex() {
-        const hash = window.location.hash.slice(1); // 获取 # 后面的内容
-        if (!hash) return Math.floor(Math.random() * nameList.length); // 如果没有 #，随机一个
+        const hash = window.location.hash.slice(1);
+        if (!hash) return Math.floor(Math.random() * nameList.length);
         
-        // 将字符串转换为数字
         let hashValue = 0;
         for (let i = 0; i < hash.length; i++) {
             hashValue = (hashValue << 5) - hashValue + hash.charCodeAt(i);
-            hashValue |= 0; // 转为 32 位整数
+            hashValue |= 0;
         }
-        
-        // 取绝对值，并对名字列表长度取余数
         return Math.abs(hashValue) % nameList.length;
     }
 
-    // 3. 获取最终显示的名字
     let userName = nameList[getHashBasedIndex()] || "朋友";
 
-    // ==========================
-    // 烟花与动画部分
-    // ==========================
-    
-    // 获取 DOM 元素
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    document.body.appendChild(canvas);
+    // 设置昵称
+    document.getElementById('name-text').innerText = userName;
 
-    // 设置画布全屏
-    function resizeCanvas() {
+    // ==========================
+    // 2. 全屏烟花特效
+    // ==========================
+    const canvas = document.getElementById('fireworks');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    resize();
+    window.addEventListener('resize', resize);
 
-    // 烟花粒子类
-    class Particle {
-        constructor(x, y) {
-            this.x = x;
-            this.y = y;
-            this.vx = (Math.random() - 0.5) * 8; // 水平速度
-            this.vy = (Math.random() - 0.5) * 8; // 垂直速度
-            this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-            this.life = 60; // 粒子寿命
-            this.decay = Math.random() * 0.5 + 0.5; // 衰减速度
-        }
-
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += 0.1; // 重力效果
-            this.life -= this.decay;
-            return this.life > 0;
-        }
-
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-        }
+    // 粒子构造函数
+    function Particle(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10;
+        this.color = color;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.05 + 0.02;
     }
+
+    Particle.prototype.update = function() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.1; // 重力
+        this.alpha -= this.decay;
+        return this.alpha > 0;
+    };
+
+    Particle.prototype.draw = function() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    };
 
     const particles = [];
 
-    function createExplosion(x, y, count = 100) {
-        for (let i = 0; i < count; i++) {
-            particles.push(new Particle(x, y));
+    // 创建爆炸
+    function explode(x, y) {
+        // 随机颜色
+        const hue = Math.floor(Math.random() * 360);
+        const color = `hsl(${hue}, 100%, 60%)`;
+        
+        // 创建粒子
+        const count = 50 + Math.floor(Math.random() * 50);
+        for(let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, color));
         }
     }
 
+    // 动画循环
     function animate() {
-        ctx.globalCompositeOperation = 'destination-out';
+        // 拖尾效果
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = 'lighter';
 
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            if (!p.update()) {
+        // 更新粒子
+        for(let i = particles.length - 1; i >= 0; i--) {
+            if(!particles[i].update()) {
                 particles.splice(i, 1);
                 continue;
             }
-            p.draw();
+            particles[i].draw();
         }
 
         requestAnimationFrame(animate);
     }
 
     // ==========================
-    // 交互逻辑
+    // 3. 自动发射烟花
     // ==========================
-
-    let hasShown = false;
-
-    function showContent() {
-        if (hasShown) return;
-        hasShown = true;
-
-        // 1. 显示名字
-        document.getElementById('name-text').innerText = userName;
+    function launch() {
+        // 随机位置
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
         
-        // 2. 文字淡入
-        document.getElementById('text-container').style.opacity = 1;
+        explode(x, y);
 
-        // 3. 在屏幕中心绽放大量烟花
-        createExplosion(canvas.width / 2, canvas.height / 2, 300);
+        // 随机延迟，制造密集感
+        const delay = 200 + Math.random() * 400;
+        setTimeout(launch, delay);
     }
 
-    // 点击屏幕触发
-    document.body.addEventListener('click', showContent);
-
-    // 启动动画
+    // 启动
     animate();
+    launch();
 </script>
 
 </body>
