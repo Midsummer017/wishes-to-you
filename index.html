@@ -5,192 +5,206 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>给你的惊喜</title>
     <style>
-        /* === 新增的样式 === */
-        .container {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        /* 引导层样式 - 覆盖全屏 */
-        .guide-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #000;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            text-align: center;
-            padding: 20px;
+        /* === 全局重置 === */
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
-        .guide-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
+
+        /* === 新的全屏引导样式 === */
+        body {
+            /* 初始背景是黑色的 */
+            background: #000;
+            color: #fff;
+            font-family: "Microsoft YaHei", sans-serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* 光标变成小手，提示可点击 */
             cursor: pointer;
         }
 
-        /* 原有样式保持不变... */
-        body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: "Microsoft YaHei", sans-serif; 
-            background: linear-gradient(135deg, #111, #333); 
-            height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            overflow: hidden; 
+        /* === 点击后的展示样式 === */
+        #content {
+            display: none; /* 初始隐藏 */
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            z-index: 10;
         }
-        .message { 
-            color: #fff; 
-            font-size: 24px; 
-            font-weight: bold; 
-            text-shadow: 0 0 10px rgba(255,255,255,0.5); 
-            opacity: 0; 
-            transform: scale(0.5); 
-            transition: all 0.5s ease; 
+
+        /* 祝福语样式 */
+        #message {
+            font-size: 24px;
+            line-height: 1.6;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease;
         }
-        .firework { 
-            position: absolute; 
-            width: 5px; 
-            height: 5px; 
-            border-radius: 50%; 
-            box-shadow: 0 0 10px 2px; 
-            pointer-events: none; 
+
+        /* 名字高亮 */
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+            font-size: 28px;
+        }
+
+        /* === 烟花容器 === */
+        #fireworks-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 让烟花不阻挡点击事件 */
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
 
-    <!-- 引导层：告诉用户点击这里开始 -->
-    <div class="guide-overlay" id="guide">
-        <h2>🎁 点击此处开启惊喜</h2>
-        <p>送给你的专属祝福</p >
-        <button class="guide-btn" onclick="startShow()">点我开始播放</button>
+    <!-- 初始显示的文字 -->
+    <div id="start-text">点击屏幕</div>
+
+    <!-- 点击后显示的内容区域 -->
+    <div id="content">
+        <div id="message">祝 <span id="name-display" class="highlight"></span> 万事顺遂！</div>
     </div>
 
-    <div class="container">
-        <div class="message" id="message"></div>
-    </div>
+    <!-- 烟花容器 -->
+    <div id="fireworks-container"></div>
 
-    <script>
-        // === 修改这里的名字 ===
-        const yourName = "小明"; // 把这里改成你的名字
-        // ====================
+<script>
+    // ==========================
+    // 第一步：获取链接中的名字
+    // ==========================
+    function getUrlParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
 
+    // 默认名字，如果链接没传名字，默认叫“朋友”
+    let userName = getUrlParam('name') || '宝';
+
+    // ==========================
+    // 第二步：页面交互逻辑
+    // ==========================
+    let hasStarted = false; // 标记是否已经开始
+
+    // 监听整个页面的点击事件
+    document.addEventListener('click', function() {
+        // 如果已经开始了，就不重复触发
+        if (hasStarted) return;
+
+        hasStarted = true;
+
+        // 1. 隐藏“点击屏幕”文字
+        document.getElementById('start-text').style.display = 'none';
+
+        // 2. 显示祝福内容
+        const content = document.getElementById('content');
+        content.style.display = 'block';
+
+        // 3. 把获取到的名字填入页面
+        document.getElementById('name-display').innerText = userName;
+
+        // 4. 动画：让祝福语缓缓出现
         const message = document.getElementById('message');
-        const guide = document.getElementById('guide');
+        setTimeout(() => {
+            message.style.opacity = '1';
+            message.style.transform = 'translateY(0)';
+        }, 300);
 
-        function startShow() {
-            // 隐藏引导层
-            guide.style.display = 'none';
-            
-            // 显示名字
-            message.textContent = `祝 ${yourName} 新年快乐！`;
-            message.style.opacity = 1;
-            message.style.transform = 'scale(1)';
-            
-            // 放烟花
-            createFireworks();
-        }
+        // 5. 触发烟花！
+        startFireworks();
+    });
+
+    // ==========================
+    // 第三步：烟花特效（增强版）
+    // ==========================
+    function startFireworks() {
+        const container = document.getElementById('fireworks-container');
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F06292', '#7986CB'];
         
-        // 原有的烟花函数保持不变...
-        function createFireworks() {
-            for (let i = 0; i < 50; i++) {
-                setTimeout(() => {
-                    createFirework();
-                }, i * 100);
-            }
-        }
-        
-        function createFirework() {
-            const firework = document.createElement('div');
-            firework.className = 'firework';
-            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            firework.style.backgroundColor = color;
-            firework.style.boxShadow = `0 0 15px 5px ${color}`;
-            
-            const startX = Math.random() * window.innerWidth;
-            const startY = window.innerHeight;
-            firework.style.left = startX + 'px';
-            firework.style.top = startY + 'px';
-            document.body.appendChild(firework);
-            
-            const endX = Math.random() * window.innerWidth;
-            const endY = Math.random() * window.innerHeight * 0.5;
-            let pos = { x: startX, y: startY };
-            const target = { x: endX, y: endY };
-            const duration = 800 + Math.random() * 700;
-            const startTime = Date.now();
-            
-            function animate() {
-                const now = Date.now();
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                pos.x = startX + (target.x - startX) * progress;
-                pos.y = startY - (startY - target.y) * progress * progress;
-                firework.style.left = pos.x + 'px';
-                firework.style.top = pos.y + 'px';
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    explode(firework, pos.x, pos.y);
-                }
-            }
-            requestAnimationFrame(animate);
-        }
-        
-        function explode(firework, x, y) {
-            if (firework.parentElement) firework.remove();
-            const particleCount = 20;
-            for (let i = 0; i < particleCount; i++) {
+        // 增加烟花数量和粒子数，使其更绚烂
+        function createFirework(x, y) {
+            const numParticles = 100; // 增加粒子数量
+            for (let i = 0; i < numParticles; i++) {
                 const particle = document.createElement('div');
-                particle.className = 'firework';
-                particle.style.backgroundColor = firework.style.backgroundColor;
-                particle.style.boxShadow = firework.style.boxShadow;
-                particle.style.left = x + 'px';
-                particle.style.top = y + 'px';
-                document.body.appendChild(particle);
+                particle.className = 'particle';
                 
+                // 随机颜色
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.backgroundColor = randomColor;
+                particle.style.boxShadow = `0 0 10px ${randomColor}`;
+                
+                // 随机角度和速度
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 5;
-                const vx = Math.cos(angle) * speed;
-                const vy = Math.sin(angle) * speed;
-                let px = x, py = y;
-                const gravity = 0.1;
-                let vyCurrent = vy - 2;
+                const speed = Math.random() * 5 + 2;
+                const life = Math.random() * 1000 + 500;
                 
-                function animateParticle() {
-                    px += vx;
-                    py += vyCurrent;
-                    vyCurrent += gravity;
-                    particle.style.left = px + 'px';
-                    particle.style.top = py + 'px';
-                    const life = 1 - (py - y) / 200;
-                    if (life > 0 && py < window.innerHeight) {
-                        particle.style.opacity = life;
-                        requestAnimationFrame(animateParticle);
-                    } else {
-                        if (particle.parentElement) particle.remove();
-                    }
-                }
-                requestAnimationFrame(animateParticle);
+                // 设置初始位置
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                
+                container.appendChild(particle);
+                
+                // 动画
+                animateParticle(particle, angle, speed, life);
             }
         }
-    </script>
+        
+        // 粒子动画函数
+        function animateParticle(particle, angle, speed, life) {
+            let posX = parseInt(particle.style.left);
+            let posY = parseInt(particle.style.top);
+            let opacity = 1;
+            
+            const interval = setInterval(() => {
+                // 更新位置
+                posX += Math.cos(angle) * speed;
+                posY += Math.sin(angle) * speed + 0.5; // 模拟重力
+                
+                // 更新样式
+                particle.style.left = `${posX}px`;
+                particle.style.top = `${posY}px`;
+                particle.style.opacity = opacity;
+                
+                // 淡出效果
+                opacity -= 0.02;
+                
+                // 移除超出屏幕或生命周期结束的粒子
+                if (opacity <= 0 || posX < 0 || posX > window.innerWidth || posY > window.innerHeight) {
+                    clearInterval(interval);
+                    container.removeChild(particle);
+                }
+            }, 16);
+        }
+        
+        // 随机在屏幕各处发射烟花
+        function launchRandomFireworks() {
+            if (!hasStarted) return;
+            
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight * 0.6; // 主要在上半部分爆炸
+            createFirework(x, y);
+            
+            // 持续发射
+            setTimeout(launchRandomFireworks, Math.random() * 300 + 100);
+        }
+        
+        // 启动烟花循环
+        launchRandomFireworks();
+    }
+</script>
 </body>
 </html>
