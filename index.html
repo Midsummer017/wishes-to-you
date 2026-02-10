@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>给你的惊喜</title>
+    <style>
+        /* === 新增的样式 === */
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* 引导层样式 - 覆盖全屏 */
+        .guide-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .guide-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* 原有样式保持不变... */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: "Microsoft YaHei", sans-serif; 
+            background: linear-gradient(135deg, #111, #333); 
+            height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden; 
+        }
+        .message { 
+            color: #fff; 
+            font-size: 24px; 
+            font-weight: bold; 
+            text-shadow: 0 0 10px rgba(255,255,255,0.5); 
+            opacity: 0; 
+            transform: scale(0.5); 
+            transition: all 0.5s ease; 
+        }
+        .firework { 
+            position: absolute; 
+            width: 5px; 
+            height: 5px; 
+            border-radius: 50%; 
+            box-shadow: 0 0 10px 2px; 
+            pointer-events: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 引导层：告诉用户点击这里开始 -->
+    <div class="guide-overlay" id="guide">
+        <h2>🎁 点击此处开启惊喜</h2>
+        <p>送给你的专属祝福</p >
+        <button class="guide-btn" onclick="startShow()">点我开始播放</button>
+    </div>
+
+    <div class="container">
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        // === 修改这里的名字 ===
+        const yourName = "小明"; // 把这里改成你的名字
+        // ====================
+
+        const message = document.getElementById('message');
+        const guide = document.getElementById('guide');
+
+        function startShow() {
+            // 隐藏引导层
+            guide.style.display = 'none';
+            
+            // 显示名字
+            message.textContent = `祝 ${yourName} 新年快乐！`;
+            message.style.opacity = 1;
+            message.style.transform = 'scale(1)';
+            
+            // 放烟花
+            createFireworks();
+        }
+        
+        // 原有的烟花函数保持不变...
+        function createFireworks() {
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    createFirework();
+                }, i * 100);
+            }
+        }
+        
+        function createFirework() {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            firework.style.backgroundColor = color;
+            firework.style.boxShadow = `0 0 15px 5px ${color}`;
+            
+            const startX = Math.random() * window.innerWidth;
+            const startY = window.innerHeight;
+            firework.style.left = startX + 'px';
+            firework.style.top = startY + 'px';
+            document.body.appendChild(firework);
+            
+            const endX = Math.random() * window.innerWidth;
+            const endY = Math.random() * window.innerHeight * 0.5;
+            let pos = { x: startX, y: startY };
+            const target = { x: endX, y: endY };
+            const duration = 800 + Math.random() * 700;
+            const startTime = Date.now();
+            
+            function animate() {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                pos.x = startX + (target.x - startX) * progress;
+                pos.y = startY - (startY - target.y) * progress * progress;
+                firework.style.left = pos.x + 'px';
+                firework.style.top = pos.y + 'px';
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    explode(firework, pos.x, pos.y);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        
+        function explode(firework, x, y) {
+            if (firework.parentElement) firework.remove();
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'firework';
+                particle.style.backgroundColor = firework.style.backgroundColor;
+                particle.style.boxShadow = firework.style.boxShadow;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                document.body.appendChild(particle);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 5;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                let px = x, py = y;
+                const gravity = 0.1;
+                let vyCurrent = vy - 2;
+                
+                function animateParticle() {
+                    px += vx;
+                    py += vyCurrent;
+                    vyCurrent += gravity;
+                    particle.style.left = px + 'px';
+                    particle.style.top = py + 'px';
+                    const life = 1 - (py - y) / 200;
+                    if (life > 0 && py < window.innerHeight) {
+                        particle.style.opacity = life;
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        if (particle.parentElement) particle.remove();
+                    }
+                }
+                requestAnimationFrame(animateParticle);
+            }
+        }
+    </script>
+</body>
+</html>
